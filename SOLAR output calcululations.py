@@ -1,53 +1,68 @@
 # Import statements
 import numpy as np
 import pandas as pd
+import os
 
 # Single panel parameters
 Voc = 21.9
-Isc = 6.13
-a = 2
+Isc = 5.56
 Pmax = 100
 Vmpp = 18
 Impp = Pmax / Vmpp
-num_panels = 2  # panels in parallel
+a = np.log(1 - Impp/Isc) / np.log(Vmpp/Voc)
+num_panels = 2
 
 # Function for calculating current as function of voltage for single panel
 def I_of_V(V):
-    V = np.array(V)
+    V = np.atleast_1d(V)
     I = Isc * (1 - (V / Voc)**a)
-    I[V < 0] = Isc
-    I[V > Voc] = 0
-    return I
+    I = np.where(V < 0, Isc, I)
+    I = np.where(V > Voc, 0, I)
+    return I if len(I) > 1 else I[0]
 
 # Function for calculating power as function of voltage for single panel
 def P_of_V(V):
     return V * I_of_V(V)
 
-# Function for finding voltage for given total power from parallel panels
-def V_from_P(P):
-    P_single = P / num_panels
-    if P_single <= 0:
-        return 0.0
-    if P_single >= Pmax:
-        return Vmpp
-    V_values = np.linspace(0, Voc, 2000)
-    P_values = P_of_V(V_values)
-    idx = np.argmin(np.abs(P_values - P_single))
-    return V_values[idx]
-
-# Function for generating power, voltage, and current data
+# Function for generating voltage, current, and power data
 def generate_data():
     data = []
-    for P in range(1, 201):  
-        V = V_from_P(P)
-        I = P / V if V != 0 else 0
-        data.append((P, round(V, 3), round(I, 3)))
+    # Start from maximum power and work towards lower power (higher voltage, lower current)
+    target_powers = range(int(Pmax * num_panels), 0, -1)  
+    
+    # Generate dense voltage points from Vmpp to Voc
+    V_values = np.linspace(Vmpp, Voc, 5000)
+    
+    # Calculate power for each voltage
+    P_lookup = []
+    for V_single in V_values:
+        I_single = I_of_V(V_single)
+        I_total = I_single * num_panels
+        P_total = V_single * I_total
+        P_lookup.append(P_total)
+    
+    P_lookup = np.array(P_lookup)
+    
+    # For each target power, find closest voltage
+    for P_target in target_powers:
+        idx = np.argmin(np.abs(P_lookup - P_target))
+        V_single = V_values[idx]
+        I_single = I_of_V(V_single)
+        I_total = I_single * num_panels
+        P_total = V_single * I_total
+        
+        data.append((P_target, round(V_single, 3), round(I_total, 3)))
+    
     return data
 
 # Function for creating and saving CSV files
 def save_csv_files(df):
+    # Ensure output directory exists
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
+    os.makedirs(output_dir, exist_ok=True)
+
     # Save main CSV
-    csv_path = "/mnt/data/solar_pannel_parallel_output_calculations.csv"
+    csv_path = os.path.join(output_dir, "solar_pannel_parallel_output_calculations.csv")
     df.to_csv(csv_path, index=False)
     print(f"Main CSV saved to: {csv_path}")
     
@@ -56,7 +71,7 @@ def save_csv_files(df):
     
     # Save second CSV if low current values found
     if not low_current_df.empty:
-        no_charge_csv = "/mnt/data/Power_resulting_in_no_charging.csv"
+        no_charge_csv = os.path.join(output_dir, "Power_resulting_in_no_charging.csv")
         low_current_df.to_csv(no_charge_csv, index=False)
         print(f"No charging CSV saved to: {no_charge_csv}")
         print(f"Found {len(low_current_df)} power levels with current < 25mA")
@@ -67,7 +82,7 @@ def save_csv_files(df):
     return csv_path
 
 def main():
-    # Generate data for power range
+    # Generate data by sweeping voltage
     data = generate_data()
     
     # Create DataFrame
