@@ -1,0 +1,72 @@
+import numpy as np
+
+# Material weights
+WEIGHT_PER_M_4X4 = 12.3
+WEIGHT_PER_M_2X4 = 5.1
+WEIGHT_PER_SQM_OSB = 15.6
+WEIGHT_PER_CASTOR = 1.8
+
+FT_TO_M = 0.3048
+
+# User inputs (feet)
+case_length_ft = float(input("Enter case length (ft): "))
+case_width_ft = float(input("Enter case width (ft): "))
+case_height_ft = float(input("Enter case height (ft): "))
+num_side_2x4 = int(input("Enter number of side 2x4s per side: "))
+num_base_2x4 = int(input("Enter number of short base 2x4s: "))
+mass_of_equipment = float(input("Enter mass of equipment (kg): "))
+equipment_com_z_ft = float(input("Enter equipment CoM height from ground (ft): "))
+
+# Convert to meters
+case_length = case_length_ft * FT_TO_M
+case_width = case_width_ft * FT_TO_M
+case_height = case_height_ft * FT_TO_M
+equipment_com_z = equipment_com_z_ft * FT_TO_M
+
+# Case center in x and y
+center_x = case_length / 2.0
+center_y = case_width / 2.0
+
+# Heights used for COM
+base_height_m = 0.2286
+castor_com_z = base_height_m / 2.0
+side_2x4_com_z = base_height_m + case_height / 2.0
+corner_4x4_com_z = base_height_m + case_height / 2.0
+
+# Corner 4x4 posts
+mass_4x4 = 4 * case_height * WEIGHT_PER_M_4X4
+com_4x4 = np.array([center_x, center_y, corner_4x4_com_z])
+
+# Side 2x4 framing
+total_side_perimeter = 2 * case_length + 2 * case_width
+total_side_2x4_length = num_side_2x4 * total_side_perimeter
+mass_side_2x4 = total_side_2x4_length * WEIGHT_PER_M_2X4
+com_side_2x4 = np.array([center_x, center_y, side_2x4_com_z])
+
+# Base 2x4 framing
+base_2x4_length = 2 * case_length + num_base_2x4 * case_width
+mass_base_2x4 = base_2x4_length * WEIGHT_PER_M_2X4
+com_base_2x4 = np.array([center_x, center_y, base_height_m])
+
+# OSB panels
+total_surface_area = 2 * case_length * case_width + 2 * case_length * case_height + 2 * case_width * case_height
+mass_osb = total_surface_area * WEIGHT_PER_SQM_OSB
+com_osb = np.array([center_x, center_y, corner_4x4_com_z])
+
+# Castor wheels
+mass_castors = 4 * WEIGHT_PER_CASTOR
+com_castors = np.array([center_x, center_y, castor_com_z])
+
+# Total mass
+total_mass = mass_4x4 + mass_side_2x4 + mass_base_2x4 + mass_osb + mass_castors + mass_of_equipment
+
+# Weighted sum for COM
+weighted_sum = mass_4x4 * com_4x4 + mass_side_2x4 * com_side_2x4 + mass_base_2x4 * com_base_2x4 + mass_osb * com_osb + mass_castors * com_castors + mass_of_equipment * np.array([center_x, center_y, equipment_com_z])
+
+# Final center of mass
+center_of_mass = weighted_sum / total_mass
+
+# Output results
+print(f"X-position (Left - / Right +): {center_of_mass[0]:.3f} m")
+print(f"Y-position (Back - / Front +): {center_of_mass[1]:.3f} m")
+print(f"Z-position (Down - / Up +): {center_of_mass[2]:.3f} m")
