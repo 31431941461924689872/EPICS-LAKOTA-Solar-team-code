@@ -1,0 +1,97 @@
+import math
+import numpy as np
+
+# Input parameters
+mass = float(input("Enter mass of the case (kg): "))
+width_ft = float(input("Enter base width facing wind (ft): "))
+height_ft = float(input("Enter height of the case body (ft): "))
+depth_ft = float(input("Enter base depth of the case (ft): "))
+wheel_height_ft = float(input("Enter height of wheels (ft): "))
+
+# COM input
+com_input = input("Enter COM height from ground (ft), or 0 if unknown: ")
+if com_input.strip() == "" or float(com_input) == 0:
+    h_COM_ft = wheel_height_ft + height_ft / 2   # assume COM at geometric center
+else:
+    h_COM_ft = float(com_input)
+
+# Wind and friction
+wind_mph = float(input("Enter max estimated wind (mph): "))
+mu_est = float(input("Enter estimated static friction coefficient: "))
+
+# Straps
+use_straps = input("Use corner straps").lower() == 'y'
+if use_straps:
+    strap_tension_max_N = float(input("Max tension per strap (N): "))
+    strap_angle_deg = float(input("Strap angle from horizontal (deg): "))
+else:
+    strap_tension_max_N = 0
+    strap_angle_deg = 0
+
+# Convert feet to meters
+FT_TO_M = 0.3048
+width = width_ft * FT_TO_M
+height = height_ft * FT_TO_M
+depth = depth_ft * FT_TO_M
+wheel_height = wheel_height_ft * FT_TO_M
+h_COM = h_COM_ft * FT_TO_M
+pivot_height = wheel_height
+strap_angle_rad = math.radians(strap_angle_deg)
+
+# Wind force
+wind_velocity = wind_mph * 0.44704                 # mph to m/s
+area = width * height                               # projected area
+Cd = 1.2
+rho = 1.225
+F_wind = 0.5 * rho * Cd * area * wind_velocity**2
+safety_factor = 1.5
+F_wind_safety = F_wind * safety_factor
+h_wind_application = wheel_height + height / 2     # acts at center of height
+
+# Strap forces
+if use_straps:
+    total_strap_vertical = 2 * strap_tension_max_N * math.sin(strap_angle_rad)
+    total_strap_horizontal = 2 * strap_tension_max_N * math.cos(strap_angle_rad)
+    torque_strap = total_strap_vertical * (depth / 2)
+else:
+    total_strap_vertical = 0
+    total_strap_horizontal = 0
+    torque_strap = 0
+
+# Tipping analysis
+torque_tipping = F_wind_safety * (h_wind_application - pivot_height)
+torque_restoring_weight = mass * 9.81 * (depth / 2)
+torque_restoring_total = torque_restoring_weight + torque_strap
+stability_ratio = torque_restoring_total / torque_tipping if torque_tipping > 0 else float('inf')
+
+# Sliding analysis
+F_horizontal = F_wind_safety - total_strap_horizontal
+normal_force = mass * 9.81 + total_strap_vertical
+mu_required = F_horizontal / normal_force if normal_force > 0 else float('inf')
+
+# Output
+print(f"\nCase Dimensions: Width={width_ft:.2f} ft, Height={height_ft + wheel_height_ft:.2f} ft, Depth={depth_ft:.2f} ft")
+print(f"Mass: {mass:.2f} kg, COM height: {h_COM_ft:.2f} ft")
+print(f"Wind: {wind_mph:.2f} mph, Force (with SF): {F_wind_safety:.2f} N, acts at height {h_wind_application / FT_TO_M:.2f} ft")
+
+if use_straps:
+    print(f"Straps: {strap_tension_max_N:.2f} N each, angle {strap_angle_deg:.1f}°")
+    print(f"Total strap vertical: {total_strap_vertical:.2f} N, horizontal: {total_strap_horizontal:.2f} N")
+    print(f"Torque from straps: {torque_strap:.2f} N·m")
+
+print(f"Tipping torque: {torque_tipping:.2f} N·m")
+print(f"Restoring torque (total): {torque_restoring_total:.2f} N·m")
+print(f"Stability ratio: {stability_ratio:.2f}")
+print(f"Required mu: {mu_required:.3f}, Estimated mu: {mu_est:.3f}")
+
+# Analyze case stability
+if stability_ratio < 1.0 and mu_required >= mu_est:
+    print("RESULT: FAIL (TIPPING) - Unit will tip before sliding")
+elif stability_ratio >= 1.0 and mu_required >= mu_est:
+    print("RESULT: FAIL (SLIDING) - Unit will slide before tipping")
+elif stability_ratio < 1.0 and mu_required < mu_est:
+    print("RESULT: FAIL (TIPPING AND SLIDING) - Unit likely to tip and slide")
+elif stability_ratio >= 1.0 and mu_required < mu_est:
+    print("RESULT: STABLE - Unit is stable against tipping and sliding")
+else:
+    print("RESULT: ERROR - Check inputs")
