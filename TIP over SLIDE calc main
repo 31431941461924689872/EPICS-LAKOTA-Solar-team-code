@@ -1,80 +1,87 @@
 import math
-# Input parameters
+
+FT_TO_M = 0.3048
+
+# Input parameters (feet)
 mass = float(input("Enter mass of the case (kg): "))
-width = float(input("Enter base width of the case facing wind (m): "))
-height = float(input("Enter height of the case (m): "))
-depth = float(input("Enter depth of the case (m): "))
-wheel_height = float(input("Enter height of wheels if any (m, 0 if none): "))
-z_offset = float(input("Enter z-axis offset of COM from geometric center (m, negative=toward wind): "))
+width_ft = float(input("Enter base width of the case facing wind (ft): "))
+height_ft = float(input("Enter height of the case (ft): "))
+depth_ft = float(input("Enter depth of the case (ft): "))
+wheel_height_ft = float(input("Enter height of wheels if any (ft, 0 if none): "))
+
+# Ask for COM height (user can enter 0 if unknown)
+com_input = input("Enter COM height from ground (ft), or 0 if unknown: ")
+if com_input.strip() == "" or float(com_input) == 0:
+    h_COM_ft = wheel_height_ft + height_ft / 2  # assume geometric center
+else:
+    h_COM_ft = float(com_input)
+
 wind_mph = float(input("Enter max estimated wind (mph): "))
 mu_est = float(input("Enter estimated static friction coefficient: "))
 
-# initilizaions
-rho = 1.225       # Air density 
-Cd = 1.2          # Drag coefficient 
-safety_factor = 1.2 # safety factor
-g = 9.81          # Gravity acceleration 
+# Convert feet to meters
+width = width_ft * FT_TO_M
+height = height_ft * FT_TO_M
+depth = depth_ft * FT_TO_M
+wheel_height = wheel_height_ft * FT_TO_M
+h_COM = h_COM_ft * FT_TO_M
+
+# initializations
+rho = 1.225
+Cd = 1.2
+safety_factor = 1.5
+g = 9.81
 
 # calculations
-wind_velocity = wind_mph * 0.44704  
-area = height * width  
+wind_velocity = wind_mph * 0.44704
+area = height * width
 F_wind = 0.5 * rho * Cd * area * wind_velocity**2
 F_wind_safety = F_wind * safety_factor
-h_wind_application = wheel_height + (height / 2)
-h_COM = wheel_height + (height / 2)
-z_COM = z_offset
+h_wind_application = wheel_height + height / 2  # wind assumed at mid-case height
 pivot_height = wheel_height
 torque_tipping = F_wind_safety * (h_wind_application - pivot_height)
-restoring_distance = (depth / 2) - abs(z_COM)
+restoring_distance = depth / 2
 torque_restoring = mass * g * restoring_distance
 F_horizontal = F_wind_safety
 mu_required = F_horizontal / (mass * g)
 stability_ratio = torque_restoring / torque_tipping if torque_tipping > 0 else float('inf')
-h_COM_max = (mass * g * restoring_distance) / F_wind_safety + pivot_height
 
 # Output
-
-print(f"CASE STABILITY ANALYSIS - {wind_mph} mph Wind")
+print(f"\nCASE STABILITY ANALYSIS - {wind_mph} mph Wind")
 print(f"\nCase Dimensions:")
-print(f"  Width (facing wind): {width:.3f} m")
-print(f"  Total Height (Case body + Wheels): {(height + wheel_height):.3f} m")
-print(f"  Depth: {depth:.3f} m")
-print(f"  Wheel height: {wheel_height:.3f} m")
+print(f"  Width (facing wind): {width_ft:.3f} ft")
+print(f"  Total Height (Case body + Wheels): {(height_ft + wheel_height_ft):.3f} ft")
+print(f"  Depth: {depth_ft:.3f} ft")
+print(f"  Wheel height: {wheel_height_ft:.3f} ft")
 print(f"  Mass: {mass:.2f} kg")
 
 print(f"\nCenter of Mass (COM) Position:")
-print(f"  Height: {h_COM:.3f} m")
-print(f"  Z-axis offset (from geometric center): {z_COM:.3f} m")
-print(f"  Z-position relative to base edge: {(depth/2) - abs(z_COM):.3f} m")
+print(f"  Height from ground: {h_COM_ft:.3f} ft")
 
 print(f"\nWind Analysis:")
 print(f"  Wind speed: {wind_mph} mph ({wind_velocity:.2f} m/s)")
-print(f"  Projected area: {area:.3f} m²")
+print(f"  Projected area: {(area / (FT_TO_M**2)):.3f} ft²")
 print(f"  Wind force (with {safety_factor}x safety factor): {F_wind_safety:.2f} N")
-print(f"  Wind force acts at height: {h_wind_application:.3f} m above ground")
+print(f"  Wind force acts at height: {h_wind_application / FT_TO_M:.3f} ft above ground")
 
-
-print(f"\nStability Analysis:(with safety factor)")
-print(f"  Tipping torque: {torque_tipping:.2f} N⋅m")
-print(f"  Restoring torque: {torque_restoring:.2f} N⋅m")
-print(f"  Stability ratio : {stability_ratio:.2f}")
+print(f"\nStability Analysis (with safety factor):")
+print(f"  Tipping torque: {torque_tipping:.2f} N·m")
+print(f"  Restoring torque: {torque_restoring:.2f} N·m")
+print(f"  Stability ratio: {stability_ratio:.2f}")
 
 print(f"\nFriction Analysis:")
-print(f"  wind force horizontal component : {F_horizontal:.2f} N")
-print(f"  normal force: {mass * g:.2f} N")
+print(f"  Wind force horizontal component: {F_horizontal:.2f} N")
+print(f"  Normal force: {mass * g:.2f} N")
 print(f"  Required coefficient of static friction: {mu_required:.3f}")
 
 def analyze_case(stability_ratio, mu_required, mu_est):
     if stability_ratio >= 1.0 and mu_required < mu_est:
-        print(f"\n STABLE: Case is stable")
-        return
+        print("\nSTABLE: Case is stable")
     elif stability_ratio >= 1.0:
-        print(f"\n UNSTABLE: Unit will slip")
-        return
+        print("\nUNSTABLE: Unit will slip")
     elif mu_required < mu_est:
-        print(f"\n UNSTABLE: Unit will tip over")
-        return
+        print("\nUNSTABLE: Unit will tip over")
     else:
-        print(f"\n UNSTABLE: Unit will tip over and slip")
-        return
+        print("\nUNSTABLE: Unit will tip over and slip")
+
 analyze_case(stability_ratio, mu_required, mu_est)
