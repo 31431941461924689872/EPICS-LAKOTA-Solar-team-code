@@ -1,3 +1,10 @@
+# Notes: Program designed to calcualte tipover and slidign risk. Mass and com are calculaed based on case design as of fall 2025 major iterations
+#        Will result is inacuate resuslts. Sliding risk is depenedent on user imputed coefiant of static friction. This value should be deterimed 
+#        experimentaly and will very dependign of soil charecteristics. program includes saftey factor of 1.5.
+
+# produced Fall 2025 
+# author Eoin Graham graha308@purdue.edu 
+
 # Import statements
 import numpy as np
 import pandas as pd
@@ -93,3 +100,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
