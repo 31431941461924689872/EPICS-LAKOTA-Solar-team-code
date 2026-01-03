@@ -1,3 +1,10 @@
+# Notes: Program designed to calcualte COM based on case design as of fall 2025 major iterations Will result is inacuate resuslts. 
+#        mass of wood and wheels will changes dependign on material used and supplies. Values should be deterimened and enetered under material weights.
+
+
+# produced Fall 2025 
+# author Eoin Graham graha308@purdue.edu 
+
 import numpy as np
 
 # Material weights
