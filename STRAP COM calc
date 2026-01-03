@@ -1,3 +1,10 @@
+# Notes: Program designed to calcualte tipover risk with the adition of starps mass and com are calculaed based on case design as of fall 2025 major iterations
+#        Will result is inacuate resuslts. code does not deterine the maxium force of tension for the staps. This should be determined form the quality of the 
+#        anchoring sytem and rating of the strap. Program asumes cornor staps which are 45 degress in the xz plane.
+
+# produced Fall 2025 
+# author Eoin Graham graha308@purdue.edu 
+
 import math
 import numpy as np
 
